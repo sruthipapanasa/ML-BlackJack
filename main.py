@@ -1,3 +1,10 @@
+#hi hoes, you need to figure out how to clear the player hand
+#also add if statements if user repeats or misspells data
+#win / lose triggers
+#train our function
+
+
+
 """"
 import nltk 
 import pandas as pd
@@ -20,6 +27,11 @@ class Card:
     def show(self):
         print("{} of {} ({})".format(self.rank, self.suit, self.value))
 
+    def clear(self):
+        self.suit = ''
+        self.rank = ''
+        self.value = 0
+
 class Deck:
     def __init__(self):
        self.cards = []
@@ -39,6 +51,10 @@ class Deck:
             r = random.randint(0, i)
             self.cards[i], self.cards[r] = self.cards[r], self.cards[i]
 
+    def clear(self):
+        for c in self.cards:
+            c.clear()
+            
     def show(self):
         for c in self.cards:
             c.show()
@@ -58,18 +74,30 @@ def counter(played_cards, count = 0):
             pass
         else:
             count -= 1
-    print("The current hi-lo count is:", str(count))
-    if count > 0:
-        print("You should not draw. Count is too high.")
-    elif count == 0:
-        print("Do whatever, bro.")
-    else:
-        print("Count is low enough. Feel free to draw")
     return count
 
+def prediction (count, player_hand):
+    #print sum of cards
+    print("\n")
+    sum = 0
+    for card in player_hand.cards:
+        sum += card.value
+    print("The sum of your cards are:", sum)
 
-def blackjack_setup(played_cards):
+    print("The current hi-lo count is:", str(count))
+    if sum < 12:
+        print('You should draw. Value of hand is low.')
+    else:
+        if count > 0:
+            print("You should not draw. Count is too high.")
+        elif count == 0:
+            print("Do whatever, bro.")
+        else:
+            print("Count is low enough. Feel free to draw")
 
+def blackjack_setup(played_cards, player_hand):
+    player_hand.clear()
+    
    #card 1 information
     card1_rank = input("Enter your first card's rank.\n")
     card1_suit = input("Enter your first card's suit. \n")
@@ -85,39 +113,43 @@ def blackjack_setup(played_cards):
     #remove cards that have already been dealt
     card1 = card_updater(deck, card1_rank, card1_suit)
     played_cards.cards.append(card1)
+    player_hand.cards.append(card1)
     deck.cards.remove(card1)
     
     card2 = card_updater(deck, card2_rank, card2_suit)
     played_cards.cards.append(card2)
+    player_hand.cards.append(card2)
     deck.cards.remove(card2)
     
     dealer = card_updater(deck, dcard_rank, dcard_suit)
     played_cards.cards.append(dealer)
     deck.cards.remove(dealer)
-    
-    #print sum of cards
-    print("\n")
-    print("The sum of your cards are:", card1.value + card2.value)
 
     count2 = counter(played_cards)
+    prediction (count2, player_hand)
 
-    answer = input('Are you going to draw again? Enter Y or N.\n')   
-    
-    if answer == 'N':
-        print("You have chosen to end the round.")
-        answer2 = input("Are you going to play another round? Enter Y or N.\n")
-        if answer2 == 'Y':
-            blackjack_setup()
-        else:
-            print("Ok, thanks for playing.")
-    else:
+    answer = input('\nAre you going to draw again? Enter Y or N.\n')   
+
+    while answer == 'Y':
         newcard_rank = input("Enter the new card rank.\n")
         newcard_suit = input("Enter the new card suit. \n")
         newcard = card_updater(deck, newcard_rank, newcard_suit)
         played_cards.cards.append(newcard)
+        player_hand.cards.append(newcard)
         deck.cards.remove(newcard)
-        counter(played_cards, count2)
+        counter3 = counter(played_cards)
+        prediction(counter3, player_hand)
+        answer = input('\nAre you going to draw again? Enter Y or N.\n')
     
+    if answer == 'N':
+        print("\nYou have chosen to end the round.")
+        answer2 = input("Are you going to play another round? Enter Y or N.\n")
+        if answer2 == 'Y':
+            player_hand.cards = []
+            blackjack_setup(played_cards, player_hand)
+        else:
+            print("\n\nOk, thanks for playing.")
+
 
 #making a deck
 deck = Deck()
@@ -125,7 +157,10 @@ deck.build()
 deck.shuffle()
 
 played_cards = Deck()
+player_hand = Deck()
+blackjack_setup(played_cards, player_hand)
+print("played cards:")
 played_cards.show()
-blackjack_setup(played_cards)
-played_cards.show()
+print("player hand")
+player_hand.cards.show()
 
