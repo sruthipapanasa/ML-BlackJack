@@ -9,8 +9,7 @@ print("TensorFlow version: {}".format(tf.__version__))
 print("Eager execution: {}".format(tf.executing_eagerly()))
 
 # column order in CSV file
-column_names = ['card1', 'card2', 'card3', 'card4', 'card5', 'cardsum', 'dcard1', 'dcard2', 'dcard3', 'dcard4', 'dcard5', 'dcardsum',  'winloss', 'placeholder']
-
+column_names = ['card1', 'card2', 'card3', 'card4', 'card5', 'cardsum', 'dcard1', 'dcard2', 'dcard3', 'dcard4', 'dcard5', 'dcardsum',  'winloss']
 feature_names = column_names[:-1]
 label_name = column_names[-1]
 print("Features: {}".format(feature_names))
@@ -28,13 +27,12 @@ with open(blackjackFile, 'r') as csvfile1:
                 row[15] = 0
             temp = row[2:14]
             temp.append(row[15])
-            temp.append('placeholder')
             row = temp
             pointwriter = csv.writer(csvfile)
             pointwriter.writerow(row)
 
 #arrays
-batch_size = 10
+batch_size = 1000
 train_dataset = tf.data.experimental.make_csv_dataset(
     modified_blackjack,
     batch_size,
@@ -53,13 +51,80 @@ features, labels = next(iter(train_dataset))
 print(features[:5])
 
 model = tf.keras.Sequential([
-  tf.keras.layers.Dense(10, activation=tf.nn.relu, input_shape=(14,)),  # input shape required
+  tf.keras.layers.Dense(10, activation=tf.nn.relu, input_shape=(5,12)),  # input shape required
   tf.keras.layers.Dense(10, activation=tf.nn.relu),
-  tf.keras.layers.Dense(3)
+  tf.keras.layers.Dense(2)
 ])
 
-#print('Features: ')
-#print(features['winloss'].numpy())
+predictions = model(features)
+predictions[:5]
+tf.nn.softmax(predictions[:5])
+
+print("Prediction: {}".format(tf.argmax(predictions, axis=1)))
+print("    Labels: {}".format(labels))
+
+
+
+loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+def loss(model, x, y, training):
+  # training=training is needed only if there are layers with different
+  # behavior during training versus inference (e.g. Dropout).
+  y_ = model(x, training=training)
+  return loss_object(y_true=y, y_pred=y_)
+
+l = loss(model, features, labels, training=False)
+print("Loss test: {}".format(l))
+
+def grad(model, inputs, targets):
+  with tf.GradientTape() as tape:
+    loss_value = loss(model, inputs, targets, training=True)
+  return loss_value, tape.gradient(loss_value, model.trainable_variables)
+
+optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
+
+loss_value, grads = grad(model, features, labels)
+
+print("Step: {}, Initial Loss: {}".format(optimizer.iterations.numpy(),
+                                          loss_value.numpy()))
+
+optimizer.apply_gradients(zip(grads, model.trainable_variables))
+
+print("Step: {},         Loss: {}".format(optimizer.iterations.numpy(),
+                                          loss(model, features, labels, training=True).numpy()))
+
+## Note: Rerunning this cell uses the same model variables
+
+# Keep results for plotting
+train_loss_results = []
+train_accuracy_results = []
+
+num_epochs = 201
+
+for epoch in range(num_epochs):
+  epoch_loss_avg = tf.keras.metrics.Mean()
+  epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
+
+  # Training loop - using batches of 32
+  for x, y in train_dataset:
+    # Optimize the model
+    loss_value, grads = grad(model, x, y)
+    optimizer.apply_gradients(zip(grads, model.trainable_variables))
+
+    # Track progress
+    epoch_loss_avg.update_state(loss_value)  # Add current batch loss
+    # Compare predicted label to actual label
+    # training=True is needed only if there are layers with different
+    # behavior during training versus inference (e.g. Dropout).
+    epoch_accuracy.update_state(y, model(x, training=True))
+
+  # End epoch
+  train_loss_results.append(epoch_loss_avg.result())
+  train_accuracy_results.append(epoch_accuracy.result())
+
+  if epoch % 25 == 0:
+    print("Epoch {:03d}: Loss: {:.3f}, Accuracy: {:.3%}".format(epoch,
+                                                                epoch_loss_avg.result(),
+                                                                epoch_accuracy.result()))
 
 #graph
 '''
