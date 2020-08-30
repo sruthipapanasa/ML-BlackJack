@@ -37,22 +37,26 @@ train_dataset = tf.data.experimental.make_csv_dataset(
 
 features, labels = next(iter(train_dataset))
 
-for f in features['winloss'].numpy():
-    if f == "Win":
-        f = 1
-    else:
-        f = 0
+var = features['winloss'].numpy()
 
-print('Features: ')
-print(features['winloss'].numpy())
+for index in range(len(var)):
+    str_winloss = var[index].decode('utf-8')
+    if str_winloss == 'Win':
+        var[index] = 1
+    else:
+        var[index] = 0
+
+
+#print('Features: ')
+#print(features['winloss'].numpy())
 
 plt.scatter(features['card1'],
-            features['cardsum'],
+            var,
             c=labels,
             cmap='viridis')
 
 plt.xlabel("Card 1")
-plt.ylabel("Card Sum")
+plt.ylabel("win loss")
 plt.show()
 
 
