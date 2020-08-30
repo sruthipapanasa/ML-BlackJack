@@ -19,14 +19,8 @@ print("Label: {}".format(label_name))
 blackjackFile = "blkjckhands.csv"
 with open(blackjackFile, 'r') as csvfile:
     pointreader = csv.reader(csvfile)
-""""
-    next(pointreader)
-    for i in range (10):
-        for row in pointreader:
-            pass
-            #print(row[2]) """
 
-
+#arrays
 batch_size = 1000
 train_dataset = tf.data.experimental.make_csv_dataset(
     blackjackFile,
@@ -50,6 +44,7 @@ for index in range(len(var)):
 #print('Features: ')
 #print(features['winloss'].numpy())
 
+#graph
 plt.scatter(features['card1'],
             var,
             c=labels,
