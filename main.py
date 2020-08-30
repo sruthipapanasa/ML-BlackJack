@@ -9,7 +9,7 @@ print("TensorFlow version: {}".format(tf.__version__))
 print("Eager execution: {}".format(tf.executing_eagerly()))
 
 # column order in CSV file
-column_names = ['index', 'player_number', 'card1', 'card2', 'card3', 'card4', 'card5', 'cardsum', 'dcard1', 'dcard2', 'dcard3', 'dcard4', 'dcard5', 'dcardsum', 'blkjck', 'winloss', 'plybustbeat', 'dlbustbeat', 'plwinamt', 'dlwinamt', 'ply2cardsum']
+column_names = ['card1', 'card2', 'card3', 'card4', 'card5', 'cardsum', 'dcard1', 'dcard2', 'dcard3', 'dcard4', 'dcard5', 'dcardsum',  'winloss', 'placeholder']
 
 feature_names = column_names[:-1]
 label_name = column_names[-1]
@@ -17,34 +17,52 @@ print("Features: {}".format(feature_names))
 print("Label: {}".format(label_name))
 
 blackjackFile = "blkjckhands.csv"
-with open(blackjackFile, 'r') as csvfile:
-    pointreader = csv.reader(csvfile)
+modified_blackjack = 'modified_blackjack.csv'
+with open(blackjackFile, 'r') as csvfile1:
+    with open(modified_blackjack, 'w') as csvfile:
+        pointreader = csv.reader(csvfile1)
+        for row in pointreader:
+            if row[15] == 'Win':
+                row[15] = 1
+            else:
+                row[15] = 0
+            temp = row[2:14]
+            temp.append(row[15])
+            temp.append('placeholder')
+            row = temp
+            pointwriter = csv.writer(csvfile)
+            pointwriter.writerow(row)
 
 #arrays
-batch_size = 1000
+batch_size = 10
 train_dataset = tf.data.experimental.make_csv_dataset(
-    blackjackFile,
+    modified_blackjack,
     batch_size,
     column_names=column_names,
     label_name=label_name,
     num_epochs=1)
+features = next(iter(train_dataset))
+print(features)
 
+def pack_features_vector(features, labels):
+  """Pack the features into a single array."""
+  features = tf.stack(list(features.values()), axis=1)
+  return features, labels
+train_dataset = train_dataset.map(pack_features_vector)
 features, labels = next(iter(train_dataset))
+print(features[:5])
 
-var = features['winloss'].numpy()
-
-for index in range(len(var)):
-    str_winloss = var[index].decode('utf-8')
-    if str_winloss == 'Win':
-        var[index] = 1
-    else:
-        var[index] = 0
-
+model = tf.keras.Sequential([
+  tf.keras.layers.Dense(10, activation=tf.nn.relu, input_shape=(14,)),  # input shape required
+  tf.keras.layers.Dense(10, activation=tf.nn.relu),
+  tf.keras.layers.Dense(3)
+])
 
 #print('Features: ')
 #print(features['winloss'].numpy())
 
 #graph
+'''
 plt.scatter(features['card1'],
             var,
             c=labels,
@@ -56,7 +74,7 @@ plt.show()
 
 
 
-'''
+
 #setting up card
 class Card:
     def __init__(self, suit, rank, value=0):
